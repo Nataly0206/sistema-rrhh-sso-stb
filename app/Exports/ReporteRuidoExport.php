@@ -159,7 +159,7 @@ class ReporteRuidoExport
             }
 
             // Límite (default 85)
-            $lim  = is_numeric($r->limites_aceptables) ? (float)$r->limites_aceptables : 80.0;
+            $lim  = 80.0;
 
             // Reducción por EPP (si excede límite)
             $nrr  = null;
@@ -229,10 +229,9 @@ class ReporteRuidoExport
 
                 if ($data->calc_promedio !== null && $data->lim_final !== null && $data->calc_promedio > $data->lim_final) {
                     $isInterna = strcasecmp((string)($data->area_nombre ?? ''), 'Area Interna') === 0;
-                    $eppTxt    = $isInterna ? 'orejeras (NRR 13.5)' : 'tapones (NRR 11.24)';
 
                     if ($acciones === null || trim($acciones) === '') {
-                        $acciones = 'Uso obligatorio de protección auditiva: ' . $eppTxt;
+                        $acciones = 'Uso obligatorio de protección auditiva: ';
                     }
                 }
 

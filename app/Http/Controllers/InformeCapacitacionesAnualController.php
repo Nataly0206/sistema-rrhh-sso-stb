@@ -9,6 +9,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class InformeCapacitacionesAnualController extends Controller
 {
@@ -66,7 +67,7 @@ class InformeCapacitacionesAnualController extends Controller
             ->selectRaw('COALESCE(a.sesiones, 0) as sesiones')
             ->selectRaw('COALESCE(a.personas, 0) as personas')
             ->selectRaw('COALESCE(a.asistencias, 0) as asistencias')
-            ->orderBy('tema')
+            ->orderBy('categoria')
             ->get()
             ->map(function ($r) {
                 $dur_h = max(0, (float)$r->dur_min) / 60.0;
@@ -160,7 +161,7 @@ public function export(Request $request)
         ->selectRaw('ci.id_capacitacion_instructor as ci_id, c.capacitacion as tema, ci.num_categoria as categoria, ci.duracion as dur_min')
         ->selectRaw("$programadaExpr as programada_norm")
         ->selectRaw('COALESCE(a.sesiones, 0) as sesiones, COALESCE(a.personas, 0) as personas, COALESCE(a.asistencias, 0) as asistencias')
-        ->orderBy('tema')
+        ->orderBy('categoria')
         ->get()
         ->map(function ($r) {
             $dur_h = max(0, (float)$r->dur_min) / 60.0;
@@ -197,35 +198,113 @@ public function export(Request $request)
     $sheet = $xlsx->getActiveSheet();
     $sheet->setTitle('Anual');
 
-    // Título / KPIs
+    // ====== Excel ======
+    $xlsx = new Spreadsheet();
+    $sheet = $xlsx->getActiveSheet();
+    $sheet->setTitle('Anual');
+
+    // Título
     $sheet->setCellValue('A1', 'Informe anual de Capacitaciones');
     $sheet->setCellValue('A2', "Año: $year");
     $sheet->mergeCells('A1:H1');
     $sheet->mergeCells('A2:H2');
     $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
-    $sheet->setCellValue('F1', '% EJECUTADAS');
-    $sheet->setCellValue('G1', $pctEjec.'%');
-    $sheet->setCellValue('F2', '% NO EJECUTADAS');
-    $sheet->setCellValue('G2', $pctNoEjec.'%');
-    $sheet->getStyle('F1')->getFont()->setBold(true)->getColor()->setARGB('FF065F46'); // verde oscuro
-    $sheet->getStyle('F2')->getFont()->setBold(true)->getColor()->setARGB('FF92400E'); // ámbar oscuro
-    $sheet->getStyle('G1:G2')->getFont()->setBold(true);
+    // === KPI BOXES GRANDES (filas 3-5) ===
+    $kpiTop  = 3;   // 3,4,5 ocupadas por KPIs
+    $kpiLeft = 'B'; // caja izquierda: B..D
+    $kpiRight= 'E'; // caja derecha:  E..G
 
-    // Mapa de colores
-    $sheet->setCellValue('A3', 'Mapa de colores: ');
-    $sheet->setCellValue('B3', 'Programada impartida');
-    $sheet->getStyle('B3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFECFDF5'); // verde
-    $sheet->setCellValue('C3', 'Programada no impartida');
-    $sheet->getStyle('C3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFBEB'); // amarillo
+    // Caja 1: % EJECUTADAS
+    $sheet->mergeCells("{$kpiLeft}{$kpiTop}:D{$kpiTop}");               // título
+    $sheet->mergeCells("{$kpiLeft}".($kpiTop+1).":D".($kpiTop+2));      // valor grande
+    $sheet->setCellValue("{$kpiLeft}{$kpiTop}", '% EJECUTADAS');
+    $sheet->setCellValue("{$kpiLeft}".($kpiTop+1), $pctEjec/100);       // valor NUMÉRICO 0.0–1.0
+    $sheet->getStyle("{$kpiLeft}{$kpiTop}:D".($kpiTop+2))
+        ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFECFDF5'); // verde suave
+    $sheet->getStyle("{$kpiLeft}{$kpiTop}:D".($kpiTop+2))
+        ->getBorders()->getOutline()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setARGB('FF10B981');
+    $sheet->getStyle("{$kpiLeft}{$kpiTop}:D".($kpiTop+2))
+        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+    $sheet->getStyle("{$kpiLeft}{$kpiTop}")->getFont()->setBold(true)->setSize(12)->getColor()->setARGB('FF065F46');
+    $sheet->getStyle("{$kpiLeft}".($kpiTop+1).":D".($kpiTop+2))->getFont()->setBold(true)->setSize(24);
+    $sheet->getStyle("{$kpiLeft}".($kpiTop+1).":D".($kpiTop+2))->getNumberFormat()->setFormatCode('0.0%');
 
-    // Encabezados
+    // Caja 2: % NO EJECUTADAS
+    $sheet->mergeCells("{$kpiRight}{$kpiTop}:G{$kpiTop}");               // título
+    $sheet->mergeCells("{$kpiRight}".($kpiTop+1).":G".($kpiTop+2));      // valor grande
+    $sheet->setCellValue("{$kpiRight}{$kpiTop}", '% NO EJECUTADAS');
+    $sheet->setCellValue("{$kpiRight}".($kpiTop+1), $pctNoEjec/100);
+    $sheet->getStyle("{$kpiRight}{$kpiTop}:G".($kpiTop+2))
+        ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFBEB'); // ámbar suave
+    $sheet->getStyle("{$kpiRight}{$kpiTop}:G".($kpiTop+2))
+        ->getBorders()->getOutline()->setBorderStyle(Border::BORDER_MEDIUM)->getColor()->setARGB('FF92400E');
+    $sheet->getStyle("{$kpiRight}{$kpiTop}:G".($kpiTop+2))
+        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+    $sheet->getStyle("{$kpiRight}{$kpiTop}")->getFont()->setBold(true)->setSize(12)->getColor()->setARGB('FF92400E');
+    $sheet->getStyle("{$kpiRight}".($kpiTop+1).":G".($kpiTop+2))->getFont()->setBold(true)->setSize(24);
+    $sheet->getStyle("{$kpiRight}".($kpiTop+1).":G".($kpiTop+2))->getNumberFormat()->setFormatCode('0.0%');
+
+    // === Mapa de colores (fila 7) ===
+    $mapRow = 7;
+    $sheet->setCellValue("A{$mapRow}", 'Mapa de colores: ');
+    $sheet->setCellValue("B{$mapRow}", 'Programada impartida');
+    $sheet->getStyle("B{$mapRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFECFDF5'); // verde
+    $sheet->setCellValue("C{$mapRow}", 'Programada no impartida');
+    $sheet->getStyle("C{$mapRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFBEB'); // amarillo
+
+    // === Encabezados de tabla (fila 9) ===
+    $hdrRow = 9;
     $header = ['Tema','Categoría','# Capacitaciones','Horas Capacitaciones','% del total de sesiones','% del total de horas','# de personas','Horas-hombre'];
-    $sheet->fromArray($header, null, 'A5');
-    $sheet->getStyle('A5:H5')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
-    $sheet->getStyle('A5:H5')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF00B0F0');
-    $sheet->getStyle('A5:H5')->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM);
+    $sheet->fromArray($header, null, "A{$hdrRow}");
+    $sheet->getStyle("A{$hdrRow}:H{$hdrRow}")->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+    $sheet->getStyle("A{$hdrRow}:H{$hdrRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF00B0F0');
+    $sheet->getStyle("A{$hdrRow}:H{$hdrRow}")->getBorders()->getBottom()->setBorderStyle(Border::BORDER_MEDIUM);
 
+    // === Datos (desde fila 10) ===
+    $rowN = $hdrRow + 1;
+    foreach ($rows as $r) {
+        $sheet->fromArray([
+            $r->tema,
+            $r->categoria ?? '—',
+            (int)$r->sesiones,
+            number_format($r->horas_cap, 2, '.', ''),
+            number_format($r->pct_sesiones, 2, '.', ''),
+            number_format($r->pct_horas, 2, '.', ''),
+            (int)$r->personas,
+            number_format($r->horas_hombre, 2, '.', ''),
+        ], null, "A{$rowN}");
+
+        // Colorear fila según estado
+        if ($r->done) {
+            $sheet->getStyle("A{$rowN}:H{$rowN}")
+                ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFECFDF5');
+        } elseif ($r->pending) {
+            $sheet->getStyle("A{$rowN}:H{$rowN}")
+                ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFBEB');
+        }
+        $rowN++;
+    }
+
+    // Totales
+    $sheet->setCellValue("A{$rowN}", 'Totales:');
+    $sheet->getStyle("A{$rowN}")->getFont()->setBold(true);
+    $sheet->mergeCells("A{$rowN}:B{$rowN}");
+    $sheet->setCellValue("C{$rowN}", $tot['sesiones']);
+    $sheet->setCellValue("D{$rowN}", number_format($tot['horas_cap'], 2, '.', ''));
+    $sheet->setCellValue("E{$rowN}", '100.00');
+    $sheet->setCellValue("F{$rowN}", '100.00');
+    $sheet->setCellValue("G{$rowN}", $tot['personas']);
+    $sheet->setCellValue("H{$rowN}", number_format($tot['horas_hombre'], 2, '.', ''));
+
+    // Formatos de % (desde la primera fila de datos)
+    $firstDataRow = $hdrRow + 1;
+    $sheet->getStyle("E{$firstDataRow}:E{$rowN}")->getNumberFormat()->setFormatCode('0.00"%"');
+    $sheet->getStyle("F{$firstDataRow}:F{$rowN}")->getNumberFormat()->setFormatCode('0.00"%"');
+
+    // Autosize / freeze
+    foreach (range('A','H') as $col) { $sheet->getColumnDimension($col)->setAutoSize(true); }
+    $sheet->freezePane("A{$firstDataRow}");
     // Datos
     $rowN = 6;
     foreach ($rows as $r) {

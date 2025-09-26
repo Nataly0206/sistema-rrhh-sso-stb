@@ -1541,11 +1541,9 @@ public function exportIluminacionDesdePlantilla(Request $request)
         }
 
 
-
         $totalRows   = $rows->count();
 
         $pagesNeeded = max(1, (int) ceil($totalRows / $perPage));
-
 
 
         for ($pageIdx = 0; $pageIdx < $pagesNeeded; $pageIdx++) {
@@ -1567,7 +1565,6 @@ public function exportIluminacionDesdePlantilla(Request $request)
         }
 
 
-
         // ---- Datos paginados
 
         $i = 0;
@@ -1583,7 +1580,6 @@ public function exportIluminacionDesdePlantilla(Request $request)
             $headerDst = $headerRow + $offset;
 
             $dstRow    = $firstData + $offset + $indexInPg;
-
 
 
             if ($indexInPg === 0 && $page > 0) {
@@ -1657,35 +1653,119 @@ public function exportRuidoDesdePlantilla(Request $request)
     $perPage        = 30;
     $colsRange      = 'A:J';
 
+    $structureSheet = clone $tplSheet;
+
+    $structureBook = new Spreadsheet();
+    $structureBook->removeSheetByIndex(0);
+    $structureBook->addExternalSheet($structureSheet);
+
+
     $dataColumns = ['A','B','C','D','E','F','G','H','I','J'];
 
-    $copyRow = function(Worksheet $sheet, int $srcRow, int $dstRow, string $rangeCols) {
+
+    $mergeCache = [];
+
+
+    $copyRow = function(Worksheet $srcSheet, Worksheet $dstSheet, int $srcRow, int $dstRow, string $rangeCols) use (&$mergeCache) {
+
         [$colStart, $colEnd] = explode(':', $rangeCols);
+
         for ($col = $colStart; $col <= $colEnd; $col++) {
+
             $src = $col.$srcRow;
+
             $dst = $col.$dstRow;
 
-            $cell = $sheet->getCell($src);
-            $sheet->setCellValueExplicit($dst, $cell->getValue(), $cell->getDataType());
-            $sheet->duplicateStyle($sheet->getStyle($src), $dst);
-            $sheet->getColumnDimension($col)->setWidth(
-                $sheet->getColumnDimension($col)->getWidth()
+
+            $cell = $srcSheet->getCell($src);
+
+            $dstSheet->setCellValueExplicit($dst, $cell->getValue(), $cell->getDataType());
+
+            $dstSheet->duplicateStyle($srcSheet->getStyle($src), $dst);
+
+            $dstSheet->getColumnDimension($col)->setWidth(
+
+                $srcSheet->getColumnDimension($col)->getWidth()
+
             );
+
         }
 
-        $sheet->getRowDimension($dstRow)->setRowHeight(
-            $sheet->getRowDimension($srcRow)->getRowHeight()
+
+        $dstSheet->getRowDimension($dstRow)->setRowHeight(
+
+            $srcSheet->getRowDimension($srcRow)->getRowHeight()
+
         );
 
-        foreach ($sheet->getMergeCells() as $merge) {
-            [$mStart, $mEnd] = explode(':', $merge);
-            if (preg_match('/([A-Z]+)(\d+)/', $mStart, $m1) && (int) $m1[2] === $srcRow) {
-                if (preg_match('/([A-Z]+)(\d+)/', $mEnd, $m2)) {
-                    $sheet->mergeCells($m1[1].$dstRow.':'.$m2[1].$dstRow);
-                }
-            }
+
+        $rowOffset = $dstRow - $srcRow;
+
+        if ($rowOffset === 0) {
+
+            return;
+
         }
+
+
+        $sheetKey = spl_object_hash($dstSheet);
+
+        if (!isset($mergeCache[$sheetKey])) {
+
+            $mergeCache[$sheetKey] = [];
+
+        }
+
+
+        foreach ($srcSheet->getMergeCells() as $merge) {
+
+            [$mStart, $mEnd] = explode(':', $merge);
+
+            if (!preg_match('/([A-Z]+)(\\d+)/', $mStart, $m1) || !preg_match('/([A-Z]+)(\\d+)/', $mEnd, $m2)) {
+
+                continue;
+
+            }
+
+
+            $startCol = $m1[1];
+
+            $startRow = (int) $m1[2];
+
+            $endCol   = $m2[1];
+
+            $endRow   = (int) $m2[2];
+
+
+            if ($srcRow < $startRow || $srcRow > $endRow) {
+
+                continue;
+
+            }
+
+
+            $dstStartRow = $startRow + $rowOffset;
+
+            $dstEndRow   = $endRow + $rowOffset;
+
+            $dstRange    = $startCol.$dstStartRow.':'.$endCol.$dstEndRow;
+
+
+            if (isset($mergeCache[$sheetKey][$dstRange])) {
+
+                continue;
+
+            }
+
+
+            $dstSheet->mergeCells($dstRange);
+
+            $mergeCache[$sheetKey][$dstRange] = true;
+
+        }
+
     };
+
 
     $highestTplRow = $tplSheet->getHighestRow();
     $footerTemplateRows = [];
@@ -1817,14 +1897,14 @@ public function exportRuidoDesdePlantilla(Request $request)
         }
         $sheet->setCellValue('B9', $headerNrr !== null ? $headerNrr : '');
 
-        $footerBaseRows = [];
         foreach ($footerTemplateRows as $idx => $tplRow) {
+
             $destRow = $footerBaseRow + $idx;
-            if ($tplRow !== $destRow) {
-                $copyRow($sheet, $tplRow, $destRow, $colsRange);
-            }
-            $footerBaseRows[] = $destRow;
+
+            $copyRow($structureSheet, $sheet, $tplRow, $destRow, $colsRange);
+
         }
+
 
         $totalRows   = $rows->count();
         $pagesNeeded = max(1, (int) ceil($totalRows / $perPage));
@@ -1847,32 +1927,45 @@ public function exportRuidoDesdePlantilla(Request $request)
             $dstRow    = $firstData + $offset + $indexInPg;
 
             if ($indexInPg === 0 && $page > 0) {
+
                 foreach ($headerRows as $srcHeaderRow) {
-                    $copyRow($sheet, $srcHeaderRow, $srcHeaderRow + $offset, $colsRange);
+
+                    $copyRow($structureSheet, $sheet, $srcHeaderRow, $srcHeaderRow + $offset, $colsRange);
+
                 }
-                foreach ($footerBaseRows as $srcFooterRow) {
-                    $copyRow($sheet, $srcFooterRow, $srcFooterRow + $offset, $colsRange);
+
+
+                for ($tplDataIdx = 0; $tplDataIdx < $perPage; $tplDataIdx++) {
+
+                    $srcDataRow  = $firstData + $tplDataIdx;
+
+                    $destDataRow = $srcDataRow + $offset;
+
+
+                    $copyRow($structureSheet, $sheet, $srcDataRow, $destDataRow, $colsRange);
+
+
+                    foreach ($dataColumns as $col) {
+
+                        $sheet->setCellValue($col.$destDataRow, '');
+
+                    }
+
                 }
+
+
+                foreach ($footerTemplateRows as $tplRow) {
+
+                    $copyRow($structureSheet, $sheet, $tplRow, $tplRow + $offset, $colsRange);
+
+                }
+
             }
 
-            $copyRow($sheet, $firstData, $dstRow, $colsRange);
 
-            $max = is_numeric($rec->nivel_maximo)  ? (float) $rec->nivel_maximo  : null;
-            $min = is_numeric($rec->nivel_minimo)  ? (float) $rec->nivel_minimo  : null;
-            $prm = (!is_null($max) && !is_null($min))
-                ? ($max + $min) / 2.0
-                : (is_numeric($rec->nivel_promedio) ? (float) $rec->nivel_promedio : null);
+            $templateRow = $firstData + $indexInPg;
 
-            $lim = is_numeric($rec->limites_aceptables) ? (float) $rec->limites_aceptables : 80.0;
-
-            $nrr = is_numeric($rec->nrr) ? (float) $rec->nrr : null;
-            if ($nrr === null && $prm !== null && $prm > $lim) {
-                $nrr = (strcasecmp((string) ($rec->area_nombre ?? ''), 'Area Interna') === 0) ? 13.5 : 11.24;
-            }
-            $nre = $prm;
-            if ($prm !== null && $nrr !== null) {
-                $nre = $prm - $nrr;
-            }
+            $copyRow($structureSheet, $sheet, $templateRow, $dstRow, $colsRange);
 
             $sheet->setCellValue('A' . $dstRow, $indexInPg + 1);
             $sheet->setCellValue('B' . $dstRow, (string) ($rec->localizacion_nombre ?? ''));

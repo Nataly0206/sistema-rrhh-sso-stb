@@ -81,7 +81,7 @@ class InformeCapacitacionesMensualController extends Controller
             ->selectRaw("COALESCE(d.fechas, '') as fechas")
             ->selectRaw('COALESCE(d.numero, 0) as numero')
             ->selectRaw("COALESCE(d.departamentos, '') as departamentos")
-            ->orderBy('tema')
+            ->orderBy('categoria')
             ->get()
             ->map(function ($r) {
                 $r->horas_hombre = ((int)$r->participantes * (int)$r->duracion) / 60;
@@ -164,7 +164,7 @@ public function export(Request $request)
         ->selectRaw("COALESCE(d.fechas, '') as fechas")
         ->selectRaw('COALESCE(d.numero, 0) as numero')
         ->selectRaw("COALESCE(d.departamentos, '') as departamentos")
-        ->orderBy('tema')
+        ->orderBy('categoria')
         ->get()
         ->map(function ($r) {
             $r->horas_hombre = (int)$r->participantes * (int)$r->duracion; // igual que la vista

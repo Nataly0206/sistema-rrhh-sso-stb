@@ -266,9 +266,8 @@ class VerificacionRiesgosController extends Controller
         ]);
     }
 
-    public function exportPlanAccion(Request $request)
+public function exportPlanAccion(Request $request)
 {
-
     // ========= 0) Parámetros y plantilla =========
     $anio = intval($request->input('anio', date('Y')));
 
@@ -337,13 +336,36 @@ class VerificacionRiesgosController extends Controller
         $puestosPorRiesgo[$rid][$row->id_puesto_trabajo_matriz] = (string)$row->nombre;
     }
 
-    $puestosQuimico = DB::table('quimico_puesto as qp')
+    // ========= 2.1) Puestos con QUÍMICOS (excluye “NINGUNO” y “No manipula…”) =========
+    // Tomamos el nombre del químico desde la tabla quimico (varios posibles campos) y filtramos en PHP usando el normalizador.
+    $excluir = [
+        $norm('NINGUNO'),
+        $norm('No manipula productos químicos solo recibe los del área asignada'),
+    ];
+    $qpRows = DB::table('quimico_puesto as qp')
         ->join('puesto_trabajo_matriz as ptm','ptm.id_puesto_trabajo_matriz','=','qp.id_puesto_trabajo_matriz')
+        ->leftJoin('quimico as q','q.id_quimico','=','qp.id_quimico')
         ->whereNotNull('qp.id_quimico')
-        ->groupBy('qp.id_puesto_trabajo_matriz','ptm.puesto_trabajo_matriz')
         ->orderBy('ptm.puesto_trabajo_matriz')
-        ->pluck('ptm.puesto_trabajo_matriz','qp.id_puesto_trabajo_matriz')
-        ->toArray();
+        ->select([
+            'qp.id_puesto_trabajo_matriz',
+            'ptm.puesto_trabajo_matriz as nombre',
+            // Intento robusto: distintos posibles nombres de columna en quimico
+            DB::raw("COALESCE(NULLIF(TRIM(q.nombre_comercial), ''), 'NINGUNO') as quimico")
+        ])
+        ->get();
+
+    // Quedarnos solo con puestos que tengan AL MENOS un químico no excluido
+    $puestosQuimicoMap = [];
+    foreach ($qpRows as $r) {
+        $qNorm = $norm((string)$r->quimico);
+        if (!in_array($qNorm, $excluir, true)) {
+            $puestosQuimicoMap[$r->id_puesto_trabajo_matriz] = (string)$r->nombre;
+        }
+    }
+    // Array plano y ordenado por nombre
+    $puestosQuimico = array_values($puestosQuimicoMap);
+    sort($puestosQuimico, SORT_NATURAL|SORT_FLAG_CASE);
 
     // ========= 3) Medidas por riesgo (incluye IDs para buscar fechas) =========
     $medidasPorRiesgo = [];
@@ -376,127 +398,127 @@ class VerificacionRiesgosController extends Controller
         if (($v=$val($r->otras)) !== null) { $medidasPorRiesgo[$rid]['otras'][$v] = true; }
     }
 
-// ========= 4) Helpers para fechas =========
+    // ========= 4) Helpers para fechas =========
 
-// Para EPP sigo usando múltiples tablas candidatas (ajústalas si usas otras)
-$eppDateTables = [
-    ['table' => 'asignacion_epp',   'id' => 'id_epp'],
-    ['table' => 'epp_entrega',      'id' => 'id_epp'],
-    ['table' => 'empleado_epp',     'id' => 'id_epp'],
-    ['table' => 'asignaciones_epp', 'id' => 'id_epp'],
-    ['table' => 'epp_empleado',     'id' => 'id_epp'],
-];
+    // Para EPP: tablas candidatas (ajusta si usas otras)
+    $eppDateTables = [
+        ['table' => 'asignacion_epp',   'id' => 'id_epp'],
+        ['table' => 'epp_entrega',      'id' => 'id_epp'],
+        ['table' => 'empleado_epp',     'id' => 'id_epp'],
+        ['table' => 'asignaciones_epp', 'id' => 'id_epp'],
+        ['table' => 'epp_empleado',     'id' => 'id_epp'],
+    ];
 
-// Detecta TODAS las columnas fecha (date/datetime/timestamp) de una tabla
-$dbName = DB::getDatabaseName();
-$detectDateCols = function (string $table) use ($dbName) {
-    if (!Schema::hasTable($table)) return [];
-    $rows = DB::select("
-        SELECT COLUMN_NAME as col
-        FROM information_schema.columns
-        WHERE table_schema = ? AND table_name = ?
-          AND DATA_TYPE IN ('date','datetime','timestamp')
-    ", [$dbName, $table]);
-    return $rows ? array_map(fn($r) => $r->col, $rows) : [];
-};
+    // Detecta TODAS las columnas DATE/DATETIME/TIMESTAMP
+    $dbName = DB::getDatabaseName();
+    $detectDateCols = function (string $table) use ($dbName) {
+        if (!Schema::hasTable($table)) return [];
+        $rows = DB::select("
+            SELECT COLUMN_NAME as col
+            FROM information_schema.columns
+            WHERE table_schema = ? AND table_name = ?
+              AND DATA_TYPE IN ('date','datetime','timestamp')
+        ", [$dbName, $table]);
+        return $rows ? array_map(fn($r) => $r->col, $rows) : [];
+    };
 
-// Trae TODAS las fechas (sin límite) por ID desde todas las columnas fecha detectadas
-$fetchDatesMap = function(array $ids, array $tableSpecs) use ($anio, $detectDateCols) {
-    $out = [];
-    $ids = array_values(array_filter(array_map('intval', $ids), fn($v)=>$v>0));
-    if (empty($ids)) return $out;
+    // Trae TODAS las fechas (sin límite) por ID desde todas las columnas fecha detectadas
+    $fetchDatesMap = function(array $ids, array $tableSpecs) use ($anio, $detectDateCols) {
+        $out = [];
+        $ids = array_values(array_filter(array_map('intval', $ids), fn($v)=>$v>0));
+        if (empty($ids)) return $out;
 
-    foreach ($tableSpecs as $spec) {
-        $table = $spec['table'];
-        $idField = $spec['id'];
-        if (!Schema::hasTable($table) || !Schema::hasColumn($table, $idField)) continue;
+        foreach ($tableSpecs as $spec) {
+            $table = $spec['table'];
+            $idField = $spec['id'];
+            if (!Schema::hasTable($table) || !Schema::hasColumn($table, $idField)) continue;
 
-        $dateCols = $detectDateCols($table);
-        if (empty($dateCols)) continue;
+            $dateCols = $detectDateCols($table);
+            if (empty($dateCols)) continue;
 
-        foreach ($dateCols as $dateCol) {
-            $rows = DB::table($table)
-                ->whereIn($idField, $ids)
-                ->whereYear($dateCol, $anio) // <-- si quieres todas las anualidades, elimina esta línea
-                ->select([$idField.' as id', DB::raw("DATE(`{$dateCol}`) as d")])
-                ->get();
+            foreach ($dateCols as $dateCol) {
+                $rows = DB::table($table)
+                    ->whereIn($idField, $ids)
+                    ->whereYear($dateCol, $anio) // <-- elimina esta línea si quieres TODAS las anualidades
+                    ->select([$idField.' as id', DB::raw("DATE(`{$dateCol}`) as d")])
+                    ->get();
 
-            foreach ($rows as $r) {
-                if (!$r->d) continue;
-                $id = (int)$r->id;
-                $out[$id][] = (string)$r->d;
+                foreach ($rows as $r) {
+                    if (!$r->d) continue;
+                    $id = (int)$r->id;
+                    $out[$id][] = (string)$r->d;
+                }
             }
         }
-    }
 
-    foreach ($out as $id => $arr) {
-        $arr = array_unique(array_filter($arr));
-        sort($arr);
-        $out[$id] = $arr;
-    }
-    return $out;
-};
+        foreach ($out as $id => $arr) {
+            $arr = array_unique(array_filter($arr));
+            sort($arr);
+            $out[$id] = $arr;
+        }
+        return $out;
+    };
 
-// Parseador SQL para VARCHAR -> DATE en asistencia_capacitacion.fecha_recibida
-$varcharDate = function(string $qualifiedCol) {
-    return "COALESCE(
-        STR_TO_DATE($qualifiedCol, '%Y-%m-%d'),
-        STR_TO_DATE($qualifiedCol, '%d/%m/%Y'),
-        STR_TO_DATE($qualifiedCol, '%d-%m-%Y'),
-        STR_TO_DATE($qualifiedCol, '%m/%d/%Y'),
-        STR_TO_DATE($qualifiedCol, '%m-%d-%Y')
-    )";
-};
+    // Parseador SQL para VARCHAR -> DATE en asistencia_capacitacion.fecha_recibida
+    $varcharDate = function(string $qualifiedCol) {
+        return "COALESCE(
+            STR_TO_DATE($qualifiedCol, '%Y-%m-%d'),
+            STR_TO_DATE($qualifiedCol, '%d/%m/%Y'),
+            STR_TO_DATE($qualifiedCol, '%d-%m-%Y'),
+            STR_TO_DATE($qualifiedCol, '%m/%d/%Y'),
+            STR_TO_DATE($qualifiedCol, '%m-%d-%Y'),
+            STR_TO_DATE($qualifiedCol, '%Y/%m/%d'),
+            STR_TO_DATE($qualifiedCol, '%Y.%m.%d')
+        )";
+    };
 
-// Fechas de CAPACITACIÓN: asistencia_capacitacion (fecha_recibida VARCHAR)
-// Relación: a.id_capacitacion_instructor -> capacitacion_instructor.id_capacitacion_instructor -> id_capacitacion
-$fetchCapAttendanceDates = function(array $capIds) use ($anio, $varcharDate) {
-    $map = [];
-    $capIds = array_values(array_filter(array_map('intval', $capIds), fn($v)=>$v>0));
-    if (empty($capIds) || !Schema::hasTable('asistencia_capacitacion')) return $map;
+    // Fechas de CAPACITACIÓN (asistencia_capacitacion.fecha_recibida VARCHAR)
+    // Relación: a.id_capacitacion_instructor -> capacitacion_instructor.id_capacitacion
+    $fetchCapAttendanceDates = function(array $capIds) use ($anio, $varcharDate) {
+        $map = [];
+        $capIds = array_values(array_filter(array_map('intval', $capIds), fn($v)=>$v>0));
+        if (empty($capIds) || !Schema::hasTable('asistencia_capacitacion')) return $map;
 
-    $dateExpr = $varcharDate('a.fecha_recibida');
+        $dateExpr = $varcharDate('a.fecha_recibida');
 
-    if (Schema::hasTable('capacitacion_instructor')
-        && Schema::hasColumn('capacitacion_instructor','id_capacitacion')
-        && Schema::hasColumn('asistencia_capacitacion','id_capacitacion_instructor')) {
+        if (Schema::hasTable('capacitacion_instructor')
+            && Schema::hasColumn('capacitacion_instructor','id_capacitacion')
+            && Schema::hasColumn('asistencia_capacitacion','id_capacitacion_instructor')) {
 
-        $rows = DB::table('asistencia_capacitacion as a')
-            ->join('capacitacion_instructor as ci','ci.id_capacitacion_instructor','=','a.id_capacitacion_instructor')
-            ->whereIn('ci.id_capacitacion', $capIds)
-            ->whereRaw("YEAR($dateExpr) = ?", [$anio]) // <-- quita esta línea si quieres todas las anualidades
-            ->select(DB::raw('ci.id_capacitacion as id'), DB::raw("DATE($dateExpr) as d"))
-            ->get();
+            $rows = DB::table('asistencia_capacitacion as a')
+                ->join('capacitacion_instructor as ci','ci.id_capacitacion_instructor','=','a.id_capacitacion_instructor')
+                ->whereIn('ci.id_capacitacion', $capIds)
+                ->whereRaw("YEAR($dateExpr) = ?", [$anio]) // <-- elimina esta línea si quieres TODAS las anualidades
+                ->select(DB::raw('ci.id_capacitacion as id'), DB::raw("DATE($dateExpr) as d"))
+                ->get();
 
-    } elseif (Schema::hasColumn('asistencia_capacitacion','id_capacitacion')) {
-        // Fallback: si tu tabla trae id_capacitacion directo
-        $rows = DB::table('asistencia_capacitacion as a')
-            ->whereIn('a.id_capacitacion', $capIds)
-            ->whereRaw("YEAR($dateExpr) = ?", [$anio])
-            ->select(DB::raw('a.id_capacitacion as id'), DB::raw("DATE($dateExpr) as d"))
-            ->get();
-    } else {
-        $rows = collect();
-    }
+        } elseif (Schema::hasColumn('asistencia_capacitacion','id_capacitacion')) {
+            $rows = DB::table('asistencia_capacitacion as a')
+                ->whereIn('a.id_capacitacion', $capIds)
+                ->whereRaw("YEAR($dateExpr) = ?", [$anio]) // <-- elimina esta línea si quieres TODAS las anualidades
+                ->select(DB::raw('a.id_capacitacion as id'), DB::raw("DATE($dateExpr) as d"))
+                ->get();
+        } else {
+            $rows = collect();
+        }
 
-    foreach ($rows as $r) {
-        if (!$r->d) continue;
-        $map[(int)$r->id][] = (string)$r->d;
-    }
-    foreach ($map as &$arr) {
-        $arr = array_values(array_unique(array_filter($arr)));
-        sort($arr);
-    }
-    return $map;
-};
+        foreach ($rows as $r) {
+            if (!$r->d) continue;
+            $map[(int)$r->id][] = (string)$r->d;
+        }
+        foreach ($map as &$arr) {
+            $arr = array_values(array_unique(array_filter($arr)));
+            sort($arr);
+        }
+        return $map;
+    };
 
-// Formateo: ahora SIN límite; muestra TODAS las fechas encontradas
-$fmtDates = function(array $dates) {
-    if (empty($dates)) return '';
-    $dates = array_map(fn($d)=>\Carbon\Carbon::parse($d)->format('d/m/Y'), $dates);
-    return implode(', ', $dates);
-};
-
+    // Formateo: TODAS las fechas (sin límite)
+    $fmtDates = function(array $dates) {
+        if (empty($dates)) return '';
+        $dates = array_map(fn($d)=>\Carbon\Carbon::parse($d)->format('d/m/Y'), $dates);
+        return implode(', ', $dates);
+    };
 
     // ========= 5) Estilos de columnas (incluye G) =========
     $rowLimit = 1000;
@@ -509,7 +531,7 @@ $fmtDates = function(array $dates) {
         $sheet->getStyle('E7:E'.$rowLimit)->getAlignment()->setWrapText(true);
         $sheet->getStyle('E7:E'.$rowLimit)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
 
-        $sheet->getColumnDimension('G')->setWidth(45);
+        $sheet->getColumnDimension('G')->setWidth(60);
         $sheet->getStyle('G7:G'.$rowLimit)->getAlignment()->setWrapText(true);
         $sheet->getStyle('G7:G'.$rowLimit)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
     } catch (\Throwable $e) {}
@@ -533,25 +555,27 @@ $fmtDates = function(array $dates) {
         $emptyStreak = 0;
 
         $key = $norm($nameTrim);
-        $puestosLista = [];
-        $rid = null;
 
-        if ($key === 'QUIMICOS' || str_contains($key, 'QUIMIC')) {
-            $puestosLista = array_values($puestosQuimico);
+        // SIEMPRE resolvemos el id del riesgo (para que haya medidas en E/G)
+        $rid = $findClosestId($key);
+
+        // Lista de puestos: si es un rótulo de QUÍMICOS, usamos $puestosQuimico; si no, los "Sí" del riesgo
+        $esQuimicos = str_contains($key, 'QUIMIC'); // coincide con "EXPOSICION A QUIMICOS", "QUIMICOS", etc.
+        if ($esQuimicos) {
+            $puestosLista = $puestosQuimico;
+        } elseif ($rid !== null && isset($puestosPorRiesgo[$rid])) {
+            $puestosLista = array_values($puestosPorRiesgo[$rid]);
+            sort($puestosLista, SORT_NATURAL|SORT_FLAG_CASE);
         } else {
-            $rid = $findClosestId($key);
-            if ($rid !== null && isset($puestosPorRiesgo[$rid])) {
-                $puestosLista = array_values($puestosPorRiesgo[$rid]);
-                sort($puestosLista, SORT_NATURAL|SORT_FLAG_CASE);
-            }
+            $puestosLista = [];
         }
 
         $sheet->setCellValue($colPuestos.$row, count($puestosLista) > 0
             ? (count($puestosLista).' puestos:'."\n".implode("\n", $puestosLista))
             : '');
 
-        // --- Medidas en E ---
-        if (isset($rid) && $rid !== null && isset($medidasPorRiesgo[$rid])) {
+        // --- Medidas en E/G (solo si tenemos rid resuelto) ---
+        if ($rid !== null && isset($medidasPorRiesgo[$rid])) {
             $mm = $medidasPorRiesgo[$rid];
             $joinKeys = function($arr){ $keys = array_keys($arr); sort($keys, SORT_NATURAL|SORT_FLAG_CASE); return implode(', ', $keys); };
 
@@ -565,35 +589,27 @@ $fmtDates = function(array $dates) {
             $sheet->setCellValue('E'.($row+2), $txtSenal);
             $sheet->setCellValue('E'.($row+3), $txtOtras);
 
-            // --- Fechas en G (solo para EPP y CAP) ---
-            // EPP
+            // Fechas EPP
             $eppIds = array_values(array_filter(array_map('intval', array_values($mm['epp_ids'])), fn($v)=>$v>0));
-            $eppDatesMap = $fetchDatesMap($eppIds, $eppDateTables); // id_epp => [Y-m-d...]
+            $eppDatesMap = $fetchDatesMap($eppIds, $eppDateTables);
             $gLinesEpp = [];
-            // mostramos por nombre en el mismo orden alfabético
             $eppNames = array_keys($mm['epp']); sort($eppNames, SORT_NATURAL|SORT_FLAG_CASE);
             foreach ($eppNames as $nm) {
                 $id = $mm['epp_ids'][$nm] ?? 0;
                 $dates = $id ? ($eppDatesMap[$id] ?? []) : [];
-                if (!empty($dates)) {
-                    $gLinesEpp[] = $nm.': '.$fmtDates($dates);
-                }
+                if (!empty($dates)) $gLinesEpp[] = $nm.': '.$fmtDates($dates);
             }
             $sheet->setCellValue('G'.$row, implode("\n", $gLinesEpp));
 
-            // CAPACITACIÓN
-            // CAPACITACIÓN (usar asistencias con fecha_recibida VARCHAR)
+            // Fechas CAP (asistencia_capacitacion.fecha_recibida VARCHAR)
             $capIds = array_values(array_filter(array_map('intval', array_values($mm['cap_ids'])), fn($v)=>$v>0));
-            $capDatesMap = $fetchCapAttendanceDates($capIds); // id_capacitacion => [Y-m-d...]
-
+            $capDatesMap = $fetchCapAttendanceDates($capIds);
             $gLinesCap = [];
             $capNames = array_keys($mm['cap']); sort($capNames, SORT_NATURAL|SORT_FLAG_CASE);
             foreach ($capNames as $nm) {
                 $id = $mm['cap_ids'][$nm] ?? 0;
                 $dates = $id ? ($capDatesMap[$id] ?? []) : [];
-                if (!empty($dates)) {
-                    $gLinesCap[] = $nm.': '.$fmtDates($dates);
-                }
+                if (!empty($dates)) $gLinesCap[] = $nm.': '.$fmtDates($dates);
             }
             $sheet->setCellValue('G'.($row+1), implode("\n", $gLinesCap));
         } else {
@@ -643,6 +659,7 @@ $fmtDates = function(array $dates) {
         'Content-Transfer-Encoding' => 'binary',
     ])->deleteFileAfterSend(true);
 }
+
 
 
     public function export(Request $request)

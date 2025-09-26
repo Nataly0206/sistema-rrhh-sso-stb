@@ -399,7 +399,7 @@
             <svg class="w-3 h-3" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2"/></svg>
           </button>
         </div>
-        <form id="form-export-identificacion" action="{{ route('identificacion.riesgos.export') }}" method="POST" class="p-4 md:p-5">
+        <form id="form-export-identificacion" action="{{ route('identificacion.riesgos.export') }}" method="POST" target="download-frame-riesgos" class="p-4 md:p-5">
           @csrf
           <label for="ptm-select-ident" class="block mb-2 text-sm font-medium text-gray-900">Selecciona el Puesto de Trabajo</label>
           <select id="ptm-select-ident" name="ptm_id" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-1 focus:ring-blue-500" required>
@@ -677,5 +677,9 @@
       });
     });
   </script>
+
+  <!-- Agrega este iframe en el layout (una sola vez), por ejemplo al final del <body> -->
+<iframe name="download-frame-riesgos" id="download-frame-riesgos" style="display:none;"></iframe>
+
 </body>
 </html>
