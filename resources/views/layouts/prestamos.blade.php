@@ -157,6 +157,16 @@
             </a>
           </li>
 
+          <li>
+            <a href="/cuotas/rango" class="group flex items-center gap-3 rounded-xl px-3 py-2 {{ $activeLink('cuotas-especiales*') }}">
+              <!-- cash -->
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h13M8 6h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+              </svg>
+              <span class="text-sm font-medium">Ver cuotas por Rango de Fechas</span>
+            </a>
+          </li>
+
           <li class="mt-4 px-2 text-xs font-semibold tracking-wide text-slate-500">Reportes</li>
 
           <li>

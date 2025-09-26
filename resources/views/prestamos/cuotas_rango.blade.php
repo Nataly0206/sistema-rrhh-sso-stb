@@ -24,7 +24,7 @@
         </ol>
     </nav>
 
-    <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <!-- <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <h2 class="text-xl font-semibold text-gray-800">Filtrar cuotas por fechas</h2>
         <a href="{{ route('cuotas') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 border border-blue-300 rounded hover:bg-blue-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -32,7 +32,7 @@
             </svg>
             Volver a historial completo
         </a>
-    </div>
+    </div> -->
 
     @if ($errorMensaje)
         <div class="mt-4 p-3 rounded bg-red-50 text-red-800 border border-red-200">
@@ -72,7 +72,7 @@
         </div>
         <div>
             <label for="search" class="block mb-1 text-sm font-medium text-gray-700">Buscar</label>
-            <input type="text" id="search" name="search" value="{{ request('search') }}" placeholder="Nombre, código o préstamo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <input type="text" id="search" name="search" value="{{ request('search') }}" placeholder="Nombre, cï¿½digo o prï¿½stamo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         </div>
         <div class="md:col-span-4 flex flex-wrap items-center gap-2">
             <button type="submit" class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">

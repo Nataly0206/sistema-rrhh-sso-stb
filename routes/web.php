@@ -43,8 +43,28 @@ use App\Http\Controllers\MedicionesController;
 use App\Http\Controllers\EppRequeridosController;
 use App\Http\Controllers\PrestamoRenunciaController;
 use App\Http\Controllers\PrestamosResumenController;
+use App\Http\Controllers\InformeCapacitacionesMensualController;
+use App\Http\Controllers\InformeCapacitacionesAnualController;
+use App\Http\Controllers\RegistroAsistenciaCapController;
 
 Route::middleware(['auth'])->group(function () {
+
+    Route::get ('/capacitaciones/registro-asistencia',        [RegistroAsistenciaCapController::class, 'index'])->name('capacitaciones.registro-asistencia');
+    Route::post('/capacitaciones/registro-asistencia',        [RegistroAsistenciaCapController::class, 'store'])->name('capacitaciones.registro-asistencia.store');
+
+    Route::get ('/capacitaciones/ci-info',                    [RegistroAsistenciaCapController::class, 'ciInfo'])->name('capacitaciones.ci-info');
+    Route::get ('/capacitaciones/empleados/search',           [RegistroAsistenciaCapController::class, 'empleadoSearch'])->name('capacitaciones.empleados.search');
+
+    Route::get('/capacitaciones/informe-anual', [InformeCapacitacionesAnualController::class, 'index'])
+    ->name('capacitaciones.informe-anual');
+    Route::get('/capacitaciones/informe-anual/export', [InformeCapacitacionesAnualController::class, 'export'])
+    ->name('capacitaciones.informe-anual.export');
+
+    Route::get('/capacitaciones/informe-mensual', [InformeCapacitacionesMensualController::class, 'index'])
+    ->name('capacitaciones.informe-mensual');
+    Route::get('/capacitaciones/informe-mensual/export', [InformeCapacitacionesMensualController::class, 'export'])
+    ->name('capacitaciones.informe-mensual.export');
+
     Route::get('/evaluacion-riesgos/puestos', [EvaluacionRiesgosExportController::class, 'puestos'])->name('evaluacion.riesgos.puestos');
     Route::post('/evaluacion-riesgos/export', [EvaluacionRiesgosExportController::class, 'export'])->name('evaluacion.riesgos.export');
     Route::post('/identificacion-riesgos/export', [IdentificacionRiesgosExportController::class, 'export'])->name('identificacion.riesgos.export');

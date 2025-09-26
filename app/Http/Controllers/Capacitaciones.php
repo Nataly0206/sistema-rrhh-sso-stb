@@ -110,6 +110,8 @@ class Capacitaciones extends Controller
             'id_capacitacion' => $request->input('id_capacitacion'),
             'id_instructor' => $request->input('id_instructor'),
             'duracion' => $request->input('duracion'),
+            'num_categoria' => $request->input('num_categoria'),
+            'programada' => $request->has('programada') ? 'SI' : 'NO',
         ]);
         return redirect()->back()->with('success', 'Capacitacion con su instructor agregado correctamente');
     }
@@ -122,6 +124,8 @@ class Capacitaciones extends Controller
                 'id_capacitacion' => $request->input('id_capacitacion'),
                 'id_instructor' => $request->input('id_instructor'),
                 'duracion' => $request->input('duracion'),
+                'num_categoria' => $request->input('num_categoria'),
+                'programada' => $request->has('programada') ? 'SI' : 'NO',
             ]);
         return redirect()->back()->with('success', 'capacitacion actualizado correctamente');
     }

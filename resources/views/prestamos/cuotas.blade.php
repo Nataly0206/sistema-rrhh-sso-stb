@@ -59,14 +59,14 @@
             </div>
         </div>
     </form>
-    <div class="mt-3">
+    <!--  <div class="mt-3">
         <a href="{{ route('cuotas.rango') }}" class="inline-flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h13M8 6h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
             </svg>
             Ver cuotas por rango de fechas
         </a>
-    </div>
+    </div>  -->
 
     @if (session('success'))
         <div class="mt-3 p-3 rounded bg-green-100 text-green-800 text-sm">{{ session('success') }}</div>

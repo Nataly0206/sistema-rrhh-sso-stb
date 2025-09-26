@@ -6,16 +6,16 @@
                     No. Cuota
                 </th>
                 <th scope="col" class="px-6 py-3">
-                    No. Préstamo
+                    No. PrÃ©stamo
                 </th>
                 <th scope="col" class="px-6 py-3">
                     Nombre del Empleado
                 </th>
                 <th scope="col" class="px-6 py-3">
-                    Fecha de Préstamo
+                    Fecha de PrÃ©stamo
                 </th>
                 <th scope="col" class="px-6 py-3">
-                    Fecha de Deducción
+                    Fecha de DeducciÃ³n
                 </th>
                 <th scope="col" class="px-6 py-3">
                     Abono a Capital
@@ -77,7 +77,7 @@
                     {{ $pagadoText }}
                 </td>
 
-                <td class="px-6 py-4 {{ (stripos($cuota->observaciones ?? '', 'cobro extraordinario') !== false) ? 'bg-yellow-100 text-yellow-900 font-medium' : ((stripos($cuota->observaciones ?? '', 'depósito') !== false || stripos($cuota->observaciones ?? '', 'deposito') !== false) ? 'bg-green-100 text-green-900 font-medium' : '') }}">
+                <td class="px-6 py-4 {{ (stripos($cuota->observaciones ?? '', 'cobro extraordinario') !== false) ? 'bg-yellow-100 text-yellow-900 font-medium' : ((stripos($cuota->observaciones ?? '', 'depï¿½sito') !== false || stripos($cuota->observaciones ?? '', 'deposito') !== false) ? 'bg-green-100 text-green-900 font-medium' : '') }}">
                     {{ $cuota->observaciones }}
                 </td>
                 <td class="px-6 py-4">
@@ -169,12 +169,12 @@
                                     <svg class="mx-auto mb-4 text-gray-400 w-12 h-12" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
                                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                                     </svg>
-                                    <h3 class="mb-5 text-lg font-normal text-gray-500">¿Está seguro de eliminar esta cuota?</h3>
+                                    <h3 class="mb-5 text-lg font-normal text-gray-500">ï¿½Estï¿½ seguro de eliminar esta cuota?</h3>
                                     <form action="{{ route('cuotas.destroy', $cuota->id_historial_cuotas) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-white bg-red-600 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center">
-                                            Sí, eliminar
+                                            Sï¿½, eliminar
                                         </button>
                                         <button data-modal-hide="delete-cuota-{{ $cuota->id_historial_cuotas }}" type="button" class="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100">
                                             No, cancelar

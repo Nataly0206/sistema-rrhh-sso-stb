@@ -113,6 +113,19 @@
                                             <span class="text-gray-700">minutos</span>
                                         </div>
                                     </div>
+
+                                    <div class="col-span-2">
+                                        <label for="num_categoria" class="block mb-2 text-sm font-medium text-gray-900">Número de categoría</label>
+                                        <input type="text" name="num_categoria" id="num_categoria" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 w-full" placeholder="Ej: 01">
+                                    </div>
+
+                                    <div class="col-span-2">
+                                        <div class="flex items-center gap-2">
+                                            <input id="programada" name="programada" type="checkbox" value="SI" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                            <label for="programada" class="ml-2 text-sm font-medium text-gray-900">Programada</label>
+                                        </div>
+                                        <p class="mt-1 text-xs text-gray-500">Marca la casilla si la capacitación está programada.</p>
+                                    </div>
                                 </div>
                             <button type="submit" class="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
                             <svg class="me-1 -ms-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"></path></svg>
@@ -180,6 +193,12 @@
                         Duración de la Capacitación (Minutos)
                     </th>
                     <th scope="col" class="px-6 py-3">
+                        Número de categoría
+                    </th>
+                    <th scope="col" class="px-6 py-3">
+                        Programada
+                    </th>
+                    <th scope="col" class="px-6 py-3">
                         Acción
                     </th>
                 </tr>
@@ -195,6 +214,12 @@
                     </td>
                     <td class="px-6 py-4">
                         {{ $capinstructores->duracion }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ $capinstructores->num_categoria }}
+                    </td>
+                    <td class="px-6 py-4">
+                        {{ $capinstructores->programada === 'SI' ? 'SI' : 'NO' }}
                     </td>
                     <td class="flex items-center px-6 py-4">
                         <button data-modal-target="edit-modal-{{ $capinstructores->id_capacitacion_instructor }}" data-modal-toggle="edit-modal-{{ $capinstructores->id_capacitacion_instructor }}" class="font-medium text-blue-600 hover:underline">Editar</button>
@@ -254,6 +279,19 @@
                                                         placeholder="Ejem: 1 hora y media = 90, 16 horas = 960">
                                                     <span class="text-gray-700">minutos</span>
                                                 </div>
+                                            </div>
+
+                                            <div class="col-span-2">
+                                                <label for="num_categoria-{{ $capinstructores->id_capacitacion_instructor }}" class="block mb-2 text-sm font-medium text-gray-900">Número de categoría</label>
+                                                <input type="text" name="num_categoria" id="num_categoria-{{ $capinstructores->id_capacitacion_instructor }}" value="{{ $capinstructores->num_categoria }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block p-2.5 w-full" placeholder="Ej: 01">
+                                            </div>
+
+                                            <div class="col-span-2">
+                                                <div class="flex items-center gap-2">
+                                                    <input id="programada-{{ $capinstructores->id_capacitacion_instructor }}" name="programada" type="checkbox" value="SI" @if($capinstructores->programada === 'SI') checked @endif class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                    <label for="programada-{{ $capinstructores->id_capacitacion_instructor }}" class="ml-2 text-sm font-medium text-gray-900">Programada</label>
+                                                </div>
+                                                <p class="mt-1 text-xs text-gray-500">Marca la casilla si la capacitación está programada.</p>
                                             </div>
                                         </div>
                                         <button type="submit" class="text-white inline-flex items-center bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">

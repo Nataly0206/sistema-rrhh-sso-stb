@@ -176,6 +176,15 @@
           </li>
 
           <li>
+            <a href="/capacitaciones/registro-asistencia" class="group flex items-center gap-3 rounded-xl px-3 py-2 {{ $activeLink('asistencia*') }}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7 4h10a2 2 0 012 2v3a7 7 0 11-14 0V6a2 2 0 012-2z"/>
+              </svg>
+              <span class="text-sm font-medium">Registro de Asistencia (Registro de Capacitaciones General)</span>
+            </a>
+          </li>
+
+          <li>
             <a href="/consultascapacitaciones" class="group flex items-center gap-3 rounded-xl px-3 py-2 {{ $activeLink('consultascapacitaciones*') }}">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"/>
@@ -203,11 +212,20 @@
           </li>
 
         <li>
-            <a href="#" class="group flex items-center gap-3 rounded-xl px-3 py-2 {{ $activeLink('capacitaciones-obligatorias*') }}">
+            <a href="/capacitaciones/informe-mensual" class="group flex items-center gap-3 rounded-xl px-3 py-2 {{ $activeLink('capacitaciones-obligatorias*') }}">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v4m0 4h.01M12 3a9 9 0 11-9 9 9 9 0 019-9z"/>
               </svg>
-              <span class="text-sm font-medium">Informe de Capacitaciones</span>
+              <span class="text-sm font-medium">Informe de Capacitaciones (Mensual)</span>
+            </a>
+          </li>
+
+          <li>
+            <a href="/capacitaciones/informe-anual" class="group flex items-center gap-3 rounded-xl px-3 py-2 {{ $activeLink('capacitaciones-obligatorias*') }}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v4m0 4h.01M12 3a9 9 0 11-9 9 9 9 0 019-9z"/>
+              </svg>
+              <span class="text-sm font-medium">Informe de Capacitaciones (Anual)</span>
             </a>
           </li>
         </ul>
